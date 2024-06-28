@@ -1,0 +1,3 @@
+[submodule "libs/bsl"]
+	path = libs/bsl
+	url = https://github.com/bloodredtape/bsl
