@@ -10,6 +10,12 @@
 
 const char *Section = "Bot";
 
+static const char *Svet = (const char*)u8"🟢Свет есть!🟢";
+static const char *NoSvet = (const char*)u8"🔴Свет закончился...🔴";
+
+static const char *SvetNotify = (const char*)u8"🟢Свет!🟢";
+static const char *NoSvetNotify = (const char*)u8"🔴No Свет?🔴";
+
 class DreamBot: public SimpleBot{
 	std::optional<bool> m_LastLightStatus;
 	std::vector<std::int64_t> m_Chats;
@@ -17,11 +23,7 @@ class DreamBot: public SimpleBot{
 
 	std::string m_ServerEndpoint;
 
-	static constexpr const char *Svet = (const char*)u8"🟢Свет есть!🟢";
-	static constexpr const char *NoSvet = (const char*)u8"🔴Свет закончился...🔴";
 
-	static constexpr const char *SvetNotify = (const char*)u8"🟢Свет!🟢";
-	static constexpr const char *NoSvetNotify = (const char*)u8"🔴No Свет?🔴";
 public:
 	DreamBot(const std::string &token, const std::string &server_endpoint):
 		SimpleBot(token),

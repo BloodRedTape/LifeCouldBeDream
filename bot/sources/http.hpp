@@ -46,7 +46,7 @@ inline std::optional<httplib::StatusCode> HttpGetStatus(const std::string& endpo
 		return std::nullopt;
 	}
 
-	return resp->status;
+	return {(httplib::StatusCode)resp->status};
 }
 
 
@@ -92,7 +92,7 @@ inline std::optional<httplib::StatusCode> HttpPostStatus(const std::string& endp
 		return std::nullopt;
 	}
 
-	return resp->status;
+	return {(httplib::StatusCode)resp->status};
 }
 
 

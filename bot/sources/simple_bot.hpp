@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <bsl/format.hpp>
 #include <tgbot/Bot.h>
+#include <tgbot/net/TgLongPoll.h>
 
 #undef SendMessage
 
@@ -50,6 +51,7 @@ private:
     LogHandler m_Log;
 
     std::unordered_map<std::string, CommandHandler> m_CommandHandlers;
+    std::unordered_map<std::string, std::string> m_CommandDescriptions;
 
     std::string m_Username;
 public:
@@ -90,7 +92,7 @@ public:
 
     TgBot::Message::Ptr ReplyPhoto(TgBot::Message::Ptr source, const std::string& text, TgBot::InputFile::Ptr photo);
 
-    TgBot::Message::Ptr EditMessage(TgBot::Message::Ptr message, const std::string& text, TgBot::GenericReply::Ptr reply);
+    TgBot::Message::Ptr EditMessage(TgBot::Message::Ptr message, const std::string& text, TgBot::InlineKeyboardMarkup::Ptr reply);
 
     TgBot::Message::Ptr EditMessage(TgBot::Message::Ptr message, const std::string& text, const KeyboardLayout& keyboard);
 
@@ -102,16 +104,16 @@ public:
 
     void RemoveKeyboard(TgBot::Message::Ptr message);
 
-    TgBot::Message::Ptr EnsureMessage(TgBot::Message::Ptr ensurable, std::int64_t chat, std::int32_t topic, const std::string &message, TgBot::GenericReply::Ptr reply = nullptr);
+    TgBot::Message::Ptr EnsureMessage(TgBot::Message::Ptr ensurable, std::int64_t chat, std::int32_t topic, const std::string &message, TgBot::InlineKeyboardMarkup::Ptr reply = nullptr);
 
     TgBot::Message::Ptr EnsureKeyboard(TgBot::Message::Ptr ensurable, std::int64_t chat, std::int32_t topic, const std::string &message, const KeyboardLayout &keyboard);
 
     bool AnswerCallbackQuery(const std::string& callbackQueryId, const std::string& text = "");
 
-    void OnCommand(const std::string &command, CommandHandler handler);
+    void OnCommand(const std::string &command, CommandHandler handler, std::string &&description = "");
     
     template<typename Type>
-    void OnCommand(const std::string &command, Type *object, void (Type::*handler)(TgBot::Message::Ptr));
+    void OnCommand(const std::string &command, Type *object, void (Type::*handler)(TgBot::Message::Ptr), std::string &&description = "");
 
     void BroadcastCommand(const std::string &command, TgBot::Message::Ptr message);
 
@@ -130,6 +132,8 @@ public:
     template<typename Type>
     void OnMyChatMember(Type *object, void (Type::*handler)(TgBot::ChatMemberUpdated::Ptr));
 
+    void UpdateCommandDescriptions();
+
     std::string ParseCommand(TgBot::Message::Ptr message);
 };
 
@@ -144,8 +148,8 @@ void SimpleBot::Log(const char* fmt, const ArgsType&...args) {
 }
 
 template<typename Type>
-void SimpleBot::OnCommand(const std::string& command, Type *object, void (Type::* handler)(TgBot::Message::Ptr)) {
-    OnCommand(command, std::bind(handler, object, std::placeholders::_1));
+void SimpleBot::OnCommand(const std::string& command, Type *object, void (Type::* handler)(TgBot::Message::Ptr), std::string &&description) {
+    OnCommand(command, std::bind(handler, object, std::placeholders::_1), std::move(description));
 }
 
 template<typename Type>
@@ -162,3 +166,11 @@ template<typename Type>
 void SimpleBot::OnMyChatMember(Type* object, void (Type::* handler)(TgBot::ChatMemberUpdated::Ptr)) {
     OnMyChatMember(std::bind(handler, object, std::placeholders::_1));
 }
+
+class SimplePollBot: public SimpleBot{
+    TgBot::TgLongPoll m_Poll;
+public:
+    SimplePollBot(const std::string &token, std::int32_t limit = 100, std::int32_t timeout = 10);
+    
+    void LongPollIteration();
+};

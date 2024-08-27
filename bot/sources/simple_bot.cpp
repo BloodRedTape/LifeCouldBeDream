@@ -72,23 +72,33 @@ SimpleBot::SimpleBot(const std::string& token):
     getEvents().onUnknownCommand([this](TgBot::Message::Ptr message) {
         std::string command = ParseCommand(message);
 
-        Println("Command '%'", command);
-
         if (!command.size()) {
             return;
         }
-
-        BroadcastCommand(command, message);
+        
+        try{
+            BroadcastCommand(command, message);
+        } catch (const std::exception& e) {
+            Log("Caught exception on '%' command broadcast: %", command, e.what());
+        }
     });
 
-    m_Username = getApi().getMe()->username;
+    try{
+        m_Username = getApi().getMe()->username;
+    } catch (const std::exception& e) {
+        Log("Failed to get bot identity: %", e.what());
+    }
 }
 
 void SimpleBot::LongPoll(){
 	TgBot::TgLongPoll long_poll(*this);
 
     while(true){
-        long_poll.start();
+        try{
+            long_poll.start();
+        } catch (const std::exception& e) {
+			Log("LongPoolException: %", e.what());
+        }
     }
 }
 
@@ -104,7 +114,11 @@ void SimpleBot::Log(const std::string& message){
 }
 
 void SimpleBot::ClearOldUpdates(){
-    getApi().getUpdates(-1, 1);
+    try{
+        getApi().getUpdates(-1, 1);
+    } catch (const std::exception& e) {
+        Log("Failed to clear old updates: %", e.what());
+    }
 }
 
 TgBot::Message::Ptr SimpleBot::SendMessage(std::int64_t chat, std::int32_t topic, const std::string& message, std::int64_t reply_message) {
@@ -120,7 +134,14 @@ TgBot::Message::Ptr SimpleBot::SendMessage(std::int64_t chat, std::int32_t topic
     TgBot::Message::Ptr result = nullptr;
 
     try {
-        result = getApi().sendMessage(chat, message, DisableWebpagePreview, reply_message, reply, ParseMode, false, {}, false, false, topic);
+        TgBot::LinkPreviewOptions::Ptr link_preview(new TgBot::LinkPreviewOptions());
+        link_preview->isDisabled = DisableWebpagePreview;
+
+        TgBot::ReplyParameters::Ptr reply_params(new TgBot::ReplyParameters());
+        reply_params->chatId = chat;
+        reply_params->messageId = reply_message;
+
+        result = getApi().sendMessage(chat, message, link_preview, reply_params, reply, ParseMode, false, {}, topic);
     }
     catch (const std::exception& exception) {
         auto chat_ptr = getApi().getChat(chat);
@@ -143,7 +164,10 @@ TgBot::Message::Ptr SimpleBot::SendKeyboard(std::int64_t chat, std::int32_t topi
 
 TgBot::Message::Ptr SimpleBot::SendPhoto(std::int64_t chat, std::int32_t topic, const std::string& text, TgBot::InputFile::Ptr photo, std::int64_t reply_message){
     try {
-        return getApi().sendPhoto(chat, photo, text, reply_message, nullptr, ParseMode, false, {}, false, false, topic, false);
+        TgBot::ReplyParameters::Ptr reply_params(new TgBot::ReplyParameters());
+        reply_params->chatId = chat;
+        reply_params->messageId = reply_message;
+	    return getApi().sendPhoto(chat, photo, text, reply_params, nullptr, ParseMode, false, {}, false, false, topic);
     }catch (const std::exception& exception) {
         auto chat_ptr = getApi().getChat(chat);
         std::string chat_name = chat_ptr->username.size() ? chat_ptr->username : chat_ptr->title;
@@ -161,10 +185,12 @@ TgBot::Message::Ptr SimpleBot::ReplyPhoto(TgBot::Message::Ptr source, const std:
     return SendPhoto(source->chat->id, source->isTopicMessage ? source->messageThreadId : 0, text, photo, source->messageId);
 }
 
-TgBot::Message::Ptr SimpleBot::EditMessage(TgBot::Message::Ptr message, const std::string& text, TgBot::GenericReply::Ptr reply) {
+TgBot::Message::Ptr SimpleBot::EditMessage(TgBot::Message::Ptr message, const std::string& text, TgBot::InlineKeyboardMarkup::Ptr reply) {
     try{
         if (text.size() && message->text != text) {
-            return getApi().editMessageText(text, message->chat->id, message->messageId, "", ParseMode, DisableWebpagePreview, reply);
+            TgBot::LinkPreviewOptions::Ptr link_preview(new TgBot::LinkPreviewOptions());
+            link_preview->isDisabled = DisableWebpagePreview;
+            return getApi().editMessageText(text, message->chat->id, message->messageId, "", ParseMode, link_preview, reply);
         } else {
             return getApi().editMessageReplyMarkup(message->chat->id, message->messageId, "", reply);
         }
@@ -223,7 +249,7 @@ void SimpleBot::RemoveKeyboard(TgBot::Message::Ptr message)
         EditMessage(message, message->text);
 }
 
-TgBot::Message::Ptr SimpleBot::EnsureMessage(TgBot::Message::Ptr ensurable, std::int64_t chat, std::int32_t topic, const std::string& message, TgBot::GenericReply::Ptr reply)
+TgBot::Message::Ptr SimpleBot::EnsureMessage(TgBot::Message::Ptr ensurable, std::int64_t chat, std::int32_t topic, const std::string& message, TgBot::InlineKeyboardMarkup::Ptr reply)
 {
     if(!ensurable)
         return SendMessage(chat, topic, message, reply);
@@ -236,8 +262,9 @@ TgBot::Message::Ptr SimpleBot::EnsureKeyboard(TgBot::Message::Ptr ensurable, std
     return EnsureMessage(ensurable, chat, topic, message, ToInlineKeyboardMarkup(keyboard));
 }
 
-void SimpleBot::OnCommand(const std::string& command, CommandHandler handler){
-    m_CommandHandlers.emplace(command, handler);
+void SimpleBot::OnCommand(const std::string& command, CommandHandler handler, std::string &&description){
+    m_CommandHandlers[command] = std::move(handler);
+    m_CommandDescriptions[command] = std::move(description);
 }
 
 void SimpleBot::BroadcastCommand(const std::string& command, TgBot::Message::Ptr message){
@@ -261,6 +288,25 @@ void SimpleBot::OnCallbackQuery(CallbackQueryHandler handler){
 
 void SimpleBot::OnMyChatMember(ChatMemberStatusHandler chat_member){
     getEvents().onMyChatMember(chat_member);
+}
+
+void SimpleBot::UpdateCommandDescriptions() {
+    std::vector<TgBot::BotCommand::Ptr> commands;
+    for (const auto& [command, descr] : m_CommandDescriptions) {
+        if(!descr.size())
+            continue;
+
+        auto bot_command = std::make_shared<TgBot::BotCommand>();
+        bot_command->command = command;
+        bot_command->description = descr;
+        commands.push_back(bot_command);
+    }
+    
+    try{
+        getApi().setMyCommands(commands);
+    } catch (const std::exception& e) {
+        Log("Failed to set bot commands: %", e.what());
+    }
 }
 
 std::string SimpleBot::ParseCommand(TgBot::Message::Ptr message)
@@ -289,4 +335,18 @@ std::string SimpleBot::ParseCommand(TgBot::Message::Ptr message)
         return {};
     
     return command;
+}
+
+
+SimplePollBot::SimplePollBot(const std::string &token, std::int32_t limit, std::int32_t timeout):
+    SimpleBot(token),
+    m_Poll(*this, limit, timeout)
+{}
+
+void SimplePollBot::LongPollIteration() {
+    try{
+        m_Poll.start();
+    } catch (const std::exception& e) {
+		Log("LongPoolException: %", e.what());
+    }
 }
