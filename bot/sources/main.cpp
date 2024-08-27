@@ -66,10 +66,13 @@ public:
 	}
 
 	void OnUpdate() {
+		Println("OnUpdate");
 		if(!m_LastLightStatus.has_value())
 			return;
 
+		Println("Broadcast");
 		for(auto chat: m_Chats){
+			Println("Send: %", chat);
 			SendMessage(chat, 0, m_LastLightStatus.value() ? SvetNotify : NoSvetNotify);
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		}
