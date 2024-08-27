@@ -79,7 +79,12 @@ public:
 	}
 
 	void OnStatus(TgBot::Message::Ptr message) {
-		ReplyMessage(message, IsLightPresent() ? Svet : NoSvet);
+		auto light = IsLightPresent();
+
+		if(!light.has_value())
+			return (void)ReplyMessage(message, "Unknown, raspberry is down");
+
+		ReplyMessage(message, light.value() ? Svet : NoSvet);
 	}
 	void OnEnable(TgBot::Message::Ptr message) {
 		if(std::count(m_Chats.begin(), m_Chats.end(), message->chat->id))
