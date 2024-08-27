@@ -48,7 +48,7 @@ public:
 		m_LastLightStatus = IsLightPresent();
 
 		if(old_status.has_value() && m_LastLightStatus.has_value() 
-		&& old_status != m_LastLightStatus)
+		&& old_status.value() != m_LastLightStatus.value())
 			OnUpdate();
 	}
 
