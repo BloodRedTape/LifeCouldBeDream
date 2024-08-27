@@ -13,4 +13,23 @@ set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF)
 add_subdirectory(libs/cpp-httplib)
 add_subdirectory(libs/tgbot-cpp)
 add_subdirectory(libs/json)
-add_subdirectory(bot)
+
+add_executable(LifeCouldBeDreamBot
+	"./bot/sources/main.cpp"
+	"./bot/sources/simple_bot.cpp"
+)
+
+target_link_libraries(LifeCouldBeDreamBot 
+	PUBLIC tgbot
+	PUBLIC nlohmann_json
+	PUBLIC bsl
+	PUBLIC httplib 
+	PUBLIC inih
+)
+
+if(CMAKE_WITH_CONAN)
+	find_package(OpenSSL)
+	target_link_libraries(LifeCouldBeDreamBot PUBLIC openssl::openssl)
+else()
+	target_link_libraries(LifeCouldBeDreamBot PUBLIC ssl PUBLIC crypto)
+endif()
