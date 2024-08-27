@@ -48,6 +48,17 @@ public:
 	void Tick() {
 		auto old_status = m_LastLightStatus;
 		m_LastLightStatus = IsLightPresent();
+		
+		if(old_status.has_value())
+			Println("OldStatus: (%)", old_status.value());
+		else
+			Println("OldStatus: ()");
+
+		if(m_LastLightStatus.has_value())
+			Println("LastStatus: (%)", m_LastLightStatus.value());
+		else
+			Println("LastStatus: ()");
+
 
 		if(old_status.has_value() && m_LastLightStatus.has_value() 
 		&& old_status.value() != m_LastLightStatus.value())
