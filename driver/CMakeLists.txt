@@ -1,5 +1,7 @@
 
 
+add_subdirectory(../libs/bsl bsl)
+
 add_executable(LifeCouldBeDreamDriver
 	"./sources/main.cpp"
 )
