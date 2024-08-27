@@ -34,6 +34,7 @@ public:
 		OnCommand("light_disable", this, &DreamBot::OnDisable);
 		OnCommand("driver_disconnect", this, &DreamBot::OnDriverDisconnect);
 		OnCommand("driver_connect", this, &DreamBot::OnDriverConnect);
+		OnCommand("driver_status", this, &DreamBot::OnDriverStatus);
 
 		std::string content = ReadEntireFile(ChatsFile);
 		
@@ -92,6 +93,15 @@ public:
 			return;
 
 		auto status = HttpPostStatus(m_ServerEndpoint, "/driver/connect");
+
+		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
+	}
+
+	void OnDriverStatus(TgBot::Message::Ptr message) {
+		if(message->from->username != "BloodRedTape")
+			return;
+
+		auto status = HttpGetStatus(m_ServerEndpoint, "/driver/status");
 
 		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 	}
