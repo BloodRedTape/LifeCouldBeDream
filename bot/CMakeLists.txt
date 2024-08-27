@@ -1,4 +1,4 @@
-find_package(openssl REQUIRED)
+find_package(OpenSSL REQUIRED)
 find_package(tgbot REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
