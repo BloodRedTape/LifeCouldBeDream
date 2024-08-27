@@ -33,6 +33,7 @@ public:
 		OnCommand("light_enable", this, &DreamBot::OnEnable);
 		OnCommand("light_disable", this, &DreamBot::OnDisable);
 		OnCommand("driver_disconnect", this, &DreamBot::OnDriverDisconnect);
+		OnCommand("driver_connect", this, &DreamBot::OnDriverConnect);
 
 		std::string content = ReadEntireFile(ChatsFile);
 		
@@ -86,6 +87,15 @@ public:
 		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 	}
 
+	void OnDriverConnect(TgBot::Message::Ptr message) {
+		if(message->from->username != "BloodRedTape")
+			return;
+
+		auto status = HttpPostStatus(m_ServerEndpoint, "/driver/connect");
+
+		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
+	}
+
 	std::optional<bool> IsLightPresent()const {
 		auto status = HttpGetStatus(m_ServerEndpoint, "/light/status");
 
@@ -109,7 +119,6 @@ public:
 
 	DreamServer() {
 		Post("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
-			m_DriverPresent = true;
 			m_LastUpdate = std::chrono::steady_clock::now();
 
 			resp.status = 200;

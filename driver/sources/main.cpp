@@ -6,8 +6,6 @@
 int main() {
 	httplib::Client http("http://dream.bloodredtape.com");
 
-	auto res = http.Post("/driver/connect");
-
 	auto Period = std::chrono::milliseconds(1000);
 
 	for (;;) {
