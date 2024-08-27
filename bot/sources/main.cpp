@@ -113,8 +113,8 @@ public:
 };
 
 class DriverServer: public httplib::Server{
-	std::chrono::steady_clock::time_point m_LastUpdate = std::chrono::steady_clock::now();
-	bool m_DriverPresent = false;
+	std::atomic<std::chrono::steady_clock::time_point> m_LastUpdate = std::chrono::steady_clock::now();
+	std::atomic<bool> m_DriverPresent = false;
 public:
 	DriverServer(){
 
@@ -142,7 +142,7 @@ public:
 	}
 
 	bool IsLightPresent()const {
-		return (std::chrono::steady_clock::now() - m_LastUpdate) < std::chrono::seconds(8);
+		return (std::chrono::steady_clock::now() - m_LastUpdate.load()) < std::chrono::seconds(8);
 	}
 
 	bool IsDriverPresent()const {
