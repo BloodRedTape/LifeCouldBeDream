@@ -7,3 +7,9 @@
 [submodule "libs/cpp-httplib"]
 	path = libs/cpp-httplib
 	url = https://github.com/yhirose/cpp-httplib.git
+[submodule "libs/tgbot-cpp"]
+	path = libs/tgbot-cpp
+	url = https://github.com/reo7sp/tgbot-cpp.git
+[submodule "libs/json"]
+	path = libs/json
+	url = https://github.com/nlohmann/json
