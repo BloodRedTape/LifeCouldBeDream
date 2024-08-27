@@ -111,6 +111,8 @@ public:
 		Post("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
 			m_DriverPresent = true;
 			m_LastUpdate = std::chrono::steady_clock::now();
+
+			resp.status = 200;
 		});
 
 		Get ("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
@@ -133,9 +135,11 @@ public:
 		Post("/driver/connect", [&](const httplib::Request& req, httplib::Response& resp) {
 			m_LastUpdate = std::chrono::steady_clock::now();
 			m_DriverPresent = true;
+			resp.status = 200;
 		});
 		Post("/driver/disconnect", [&](const httplib::Request& req, httplib::Response& resp) {
 			m_DriverPresent = false;
+			resp.status = 200;
 		});
 	}
 
