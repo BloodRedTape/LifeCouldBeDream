@@ -71,7 +71,7 @@ public:
 	}
 
 	void OnStatus(TgBot::Message::Ptr message);
-	
+
 	void OnEnable(TgBot::Message::Ptr message) {
 		if(std::count(m_Chats.begin(), m_Chats.end(), message->chat->id))
 			return;
@@ -203,6 +203,9 @@ public:
 };
 
 void DreamBot::OnStatus(TgBot::Message::Ptr message) {
+	if(!DriverServer::Get().IsDriverPresent())
+		return (void)ReplyMessage(message, "Unknown, raspberry is down");
+
 	ReplyMessage(message, DriverServer::Get().IsLightPresent() ? Svet : NoSvet);
 }
 
