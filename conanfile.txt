@@ -1,7 +1,5 @@
 [requires]
 openssl/3.2.1
-cpp-httplib/0.15.3
-inih/58
 tgbot/1.7.2
 nlohmann_json/3.11.3
 

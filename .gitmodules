@@ -1,3 +1,9 @@
 [submodule "libs/bsl"]
 	path = libs/bsl
 	url = https://github.com/bloodredtape/bsl
+[submodule "libs/inih"]
+	path = libs/inih
+	url = https://github.com/benhoyt/inih.git
+[submodule "libs/cpp-httplib"]
+	path = libs/cpp-httplib
+	url = https://github.com/yhirose/cpp-httplib.git
