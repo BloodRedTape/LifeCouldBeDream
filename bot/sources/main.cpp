@@ -16,14 +16,25 @@ static const char *NoSvet = (const char*)u8"🔴Свет закончился...
 static const char *SvetNotify = (const char*)u8"🟢Свет!🟢";
 static const char *NoSvetNotify = (const char*)u8"🔴No Свет?🔴";
 
+enum class LightChange {
+	None,
+	Up,
+	Down
+};
+
+struct LightNotify {
+	LightChange Change;	
+	std::int64_t UnixTime = 0;
+
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE(LightNotify, Change, UnixTime)
+};
+
 class DreamBot: public SimpleBot{
 	std::optional<bool> m_LastLightStatus;
 	std::vector<std::int64_t> m_Chats;
 	const char *ChatsFile = "chats.json";
 
 	std::string m_ServerEndpoint;
-
-
 public:
 	DreamBot(const std::string &token, const std::string &server_endpoint):
 		SimpleBot(token),
@@ -46,41 +57,21 @@ public:
 	}
 
 	void Tick() {
-		auto old_status = m_LastLightStatus;
-		m_LastLightStatus = IsLightPresent();
-		
-		if(old_status.has_value())
-			Println("OldStatus: (%)", old_status.value());
-		else
-			Println("OldStatus: ()");
+		std::vector<LightNotify> notifications = HttpGetJson(m_ServerEndpoint, "/light/notifications");
 
-		if(m_LastLightStatus.has_value())
-			Println("LastStatus: (%)", m_LastLightStatus.value());
-		else
-			Println("LastStatus: ()");
-
-
-		if(old_status.has_value() && m_LastLightStatus.has_value() 
-		&& old_status.value() != m_LastLightStatus.value())
-			OnUpdate();
+		for(const auto &notify: notifications)
+			Broadcast(notify);
 	}
 
-	void OnUpdate() {
-		Println("OnUpdate");
-		if(!m_LastLightStatus.has_value())
-			return;
-
-		Println("Broadcast");
+	void Broadcast(const LightNotify &notify) {
 		for(auto chat: m_Chats){
-			Println("Send: %", chat);
-			SendMessage(chat, 0, m_LastLightStatus.value() ? SvetNotify : NoSvetNotify);
+			SendMessage(chat, 0, notify.Change == LightChange::Up ? SvetNotify : NoSvetNotify);
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		}
 	}
 
-	void OnStatus(TgBot::Message::Ptr message) {
-		ReplyMessage(message, IsLightPresent() ? Svet : NoSvet);
-	}
+	void OnStatus(TgBot::Message::Ptr message);
+	
 	void OnEnable(TgBot::Message::Ptr message) {
 		if(std::count(m_Chats.begin(), m_Chats.end(), message->chat->id))
 			return;
@@ -119,47 +110,21 @@ public:
 
 		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 	}
-
-	std::optional<bool> IsLightPresent()const {
-		auto status = HttpGetStatus(m_ServerEndpoint, "/light/status");
-
-		if(!status.has_value())
-			return std::nullopt;
-
-		if(status.value() == httplib::OK_200)
-			return true;
-		if(status.value() == httplib::Gone_410)
-			return false;
-
-		return std::nullopt;
-	}
 };
 
-
-class DreamServer: public httplib::Server{
+class DriverServer: public httplib::Server{
 	std::chrono::steady_clock::time_point m_LastUpdate = std::chrono::steady_clock::now();
 	bool m_DriverPresent = false;
 public:
+	DriverServer(){
 
-	DreamServer() {
-		Post("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
+		Post("/driver/light/update", [&](const httplib::Request& req, httplib::Response& resp) {
 			m_LastUpdate = std::chrono::steady_clock::now();
 
 			resp.status = 200;
 		});
 
-		Get ("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
-			if (!IsDriverPresent()) {
-				resp.status = httplib::StatusCode::NotFound_404;
-				return;
-			}
-
-			resp.status = IsLightPresent() 
-				? httplib::StatusCode::OK_200 
-				: httplib::StatusCode::Gone_410;
-		});
-
-		Get ("/driver/status", [&](const httplib::Request& req, httplib::Response& resp) {
+		httplib::Server::Get("/driver/status", [&](const httplib::Request& req, httplib::Response& resp) {
 			resp.status = IsDriverPresent() 
 				? httplib::StatusCode::OK_200 
 				: httplib::StatusCode::Gone_410;
@@ -183,7 +148,63 @@ public:
 	bool IsDriverPresent()const {
 		return m_DriverPresent;
 	}
+
+	std::optional<bool> LightStatus()const {
+		if(!m_DriverPresent)
+			return std::nullopt;
+		
+		return {IsLightPresent()};
+	}
+
+	static DriverServer& Get() {
+		static DriverServer s_Server;
+
+		return s_Server;
+	}
 };
+
+class DreamServer: public httplib::Server{
+	std::vector<LightNotify> m_LightNotifies;
+	std::optional<bool> m_LastLightStatus;
+public:
+
+	DreamServer() {
+
+		Get ("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
+			if (!DriverServer::Get().IsDriverPresent()) {
+				resp.status = httplib::StatusCode::NotFound_404;
+				return;
+			}
+
+			resp.status = DriverServer::Get().IsLightPresent() 
+				? httplib::StatusCode::OK_200 
+				: httplib::StatusCode::Gone_410;
+		});
+
+		Get ("/light/notifications", [&](const httplib::Request& req, httplib::Response& resp) {
+			resp.status = 200;
+			resp.set_content(nlohmann::json(m_LightNotifies).dump(), "application/json");
+			m_LightNotifies.clear();
+		});
+
+		Post("/timer/tick", [&](const httplib::Request& req, httplib::Response& resp) {
+			auto old_status = m_LastLightStatus;
+			m_LastLightStatus = DriverServer::Get().LightStatus();
+		
+			if(old_status.has_value() && m_LastLightStatus.has_value() 
+			&& old_status.value() != m_LastLightStatus.value())
+				m_LightNotifies.push_back({m_LastLightStatus.value() ? LightChange::Up : LightChange::Down});
+
+			resp.status = 200;
+		});
+	}
+
+
+};
+
+void DreamBot::OnStatus(TgBot::Message::Ptr message) {
+	ReplyMessage(message, DriverServer::Get().IsLightPresent() ? Svet : NoSvet);
+}
 
 int main() {
 	INIReader config("BotConfig.ini");
@@ -195,11 +216,15 @@ int main() {
 
 	std::string hostname = config.Get("Server", "Host", "localhost");
 	int port = config.GetInteger("Server", "Port", 1488);
+
+	std::string driver_hostname = config.Get("Driver", "Host", "localhost");
+	int driver_port = config.GetInteger("Driver", "Port", 44188);
+
 	std::string token = config.Get("Bot", "Token", "");
 
 	std::string endpoint = Format("http://%:%", hostname, port);
 
-	std::thread server_thread(
+	std::thread(
 		[](std::string host, int port){
 			DreamServer server;
 			bool status = server.listen(host, port);
@@ -208,7 +233,28 @@ int main() {
 		},
 		hostname,
 		port
-	);
+	).detach();
+
+	std::thread(
+		[](std::string host, int port){
+			DriverServer server;
+			bool status = server.listen(host, port);
+
+			Println("Status: %", status);
+		},
+		driver_hostname,
+		driver_port
+	).detach();
+
+	std::thread([](){
+		httplib::Client client("http://dream.bloodredtape.com");
+
+		for (;;) {
+			client.Post("/timer/tick");
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		}
+	}).detach();
 	
 	DreamBot bot(token, endpoint);
 
