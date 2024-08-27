@@ -107,6 +107,7 @@ public:
 
 	DreamServer() {
 		Post("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
+			m_DriverPresent = true;
 			m_LastUpdate = std::chrono::steady_clock::now();
 		});
 
