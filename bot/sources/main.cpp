@@ -113,10 +113,11 @@ public:
 };
 
 class DriverServer: public httplib::Server{
-	std::atomic<std::chrono::steady_clock::time_point> m_LastUpdate = std::chrono::steady_clock::now();
-	std::atomic<bool> m_DriverPresent = false;
+	volatile std::atomic<std::chrono::steady_clock::time_point> m_LastUpdate = std::chrono::steady_clock::now();
+	volatile std::atomic<bool> m_DriverPresent;
 public:
 	DriverServer(){
+		m_DriverPresent.store(false);
 
 		Post("/driver/light/update", [&](const httplib::Request& req, httplib::Response& resp) {
 			m_LastUpdate = std::chrono::steady_clock::now();
@@ -132,11 +133,11 @@ public:
 
 		Post("/driver/connect", [&](const httplib::Request& req, httplib::Response& resp) {
 			m_LastUpdate = std::chrono::steady_clock::now();
-			m_DriverPresent = true;
+			m_DriverPresent.store(true);
 			resp.status = 200;
 		});
 		Post("/driver/disconnect", [&](const httplib::Request& req, httplib::Response& resp) {
-			m_DriverPresent = false;
+			m_DriverPresent.store(false);
 			resp.status = 200;
 		});
 	}
@@ -146,11 +147,11 @@ public:
 	}
 
 	bool IsDriverPresent()const {
-		return m_DriverPresent;
+		return m_DriverPresent.load();
 	}
 
 	std::optional<bool> LightStatus()const {
-		if(!m_DriverPresent)
+		if(!IsDriverPresent())
 			return std::nullopt;
 		
 		return {IsLightPresent()};
