@@ -34,11 +34,11 @@ class DreamBot: public SimpleBot{
 	std::vector<std::int64_t> m_Chats;
 	const char *ChatsFile = "chats.json";
 
-	std::string m_ServerEndpoint;
+	const char *DriverEndpoint = "http://driver.dream.bloodredtape.com";
+	const char *ServerEndpoint = "http://dream.bloodredtape.com";
 public:
-	DreamBot(const std::string &token, const std::string &server_endpoint):
-		SimpleBot(token),
-		m_ServerEndpoint(server_endpoint)
+	DreamBot(const std::string &token):
+		SimpleBot(token)
 	{
 		OnCommand("light_status", this, &DreamBot::OnStatus);
 		OnCommand("light_enable", this, &DreamBot::OnEnable);
@@ -57,7 +57,7 @@ public:
 	}
 
 	void Tick() {
-		std::vector<LightNotify> notifications = HttpGetJson(m_ServerEndpoint, "/light/notifications");
+		std::vector<LightNotify> notifications = HttpGetJson(ServerEndpoint, "/light/notifications");
 
 		for(const auto &notify: notifications)
 			Broadcast(notify);
@@ -88,7 +88,7 @@ public:
 		if(message->from->username != "BloodRedTape")
 			return;
 
-		auto status = HttpPostStatus(m_ServerEndpoint, "/driver/disconnect");
+		auto status = HttpPostStatus(DriverEndpoint, "/driver/disconnect");
 
 		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 	}
@@ -97,7 +97,7 @@ public:
 		if(message->from->username != "BloodRedTape")
 			return;
 
-		auto status = HttpPostStatus(m_ServerEndpoint, "/driver/connect");
+		auto status = HttpPostStatus(DriverEndpoint, "/driver/connect");
 
 		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 	}
@@ -106,7 +106,7 @@ public:
 		if(message->from->username != "BloodRedTape")
 			return;
 
-		auto status = HttpGetStatus(m_ServerEndpoint, "/driver/status");
+		auto status = HttpGetStatus(DriverEndpoint, "/driver/status");
 
 		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 	}
@@ -259,7 +259,7 @@ int main() {
 		}
 	}).detach();
 	
-	DreamBot bot(token, endpoint);
+	DreamBot bot(token);
 
 
 	TgBot::TgLongPoll poll(bot, 100, 1);
