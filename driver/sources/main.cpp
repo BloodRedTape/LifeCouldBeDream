@@ -6,7 +6,7 @@
 int main() {
 	httplib::Client http("http://dream.bloodredtape.com");
 
-	auto Period = std::chrono::milliseconds(1000);
+	auto Period = std::chrono::milliseconds(2000);
 
 	for (;;) {
 		auto res = http.Post("/light/status");
