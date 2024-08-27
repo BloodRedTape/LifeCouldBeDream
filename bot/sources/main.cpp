@@ -157,7 +157,7 @@ int main() {
 	}
 
 	std::string hostname = config.Get("Server", "Host", "localhost");
-	int port = config.GetInteger("Server", "Post", 1488);
+	int port = config.GetInteger("Server", "Port", 1488);
 	std::string token = config.Get("Bot", "Token", "");
 
 	std::string endpoint = Format("http://%:%", hostname, port);
