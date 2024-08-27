@@ -177,7 +177,7 @@ public:
 	}
 
 	bool IsLightPresent()const {
-		return (std::chrono::steady_clock::now() - m_LastUpdate) < std::chrono::seconds(5);
+		return (std::chrono::steady_clock::now() - m_LastUpdate) < std::chrono::seconds(8);
 	}
 
 	bool IsDriverPresent()const {
