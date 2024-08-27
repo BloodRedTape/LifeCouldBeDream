@@ -7,6 +7,6 @@ add_executable(LifeCouldBeDreamDriver
 )
 
 target_link_libraries(LifeCouldBeDreamDriver 
-	PUBLIC httplib 
+	PUBLIC cpp-httplib 
 	PUBLIC bsl
 )
