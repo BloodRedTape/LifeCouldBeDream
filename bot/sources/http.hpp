@@ -41,11 +41,6 @@ inline std::optional<httplib::StatusCode> HttpGetStatus(const std::string& endpo
 		return std::nullopt;
 	}
 
-	if (resp->status != httplib::StatusCode::OK_200){
-		LogHttp(Error, "GET Request to % failed with http status %", endpoint + path, resp->status);
-		return std::nullopt;
-	}
-
 	return {(httplib::StatusCode)resp->status};
 }
 
@@ -84,11 +79,6 @@ inline std::optional<httplib::StatusCode> HttpPostStatus(const std::string& endp
 
 	if (!resp || resp.error() != httplib::Error::Success){
 		LogHttp(Error, "POST Request to % failed with internal error %", endpoint + path, httplib::to_string(resp.error()));
-		return std::nullopt;
-	}
-
-	if (resp->status != httplib::StatusCode::OK_200){
-		LogHttp(Error, "POST Request to % failed with http status %", endpoint + path, resp->status);
 		return std::nullopt;
 	}
 
