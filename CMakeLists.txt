@@ -20,7 +20,7 @@ add_executable(LifeCouldBeDreamBot
 )
 
 target_link_libraries(LifeCouldBeDreamBot 
-	PUBLIC tgbot
+	PUBLIC TgBot
 	PUBLIC nlohmann_json
 	PUBLIC bsl
 	PUBLIC httplib 
