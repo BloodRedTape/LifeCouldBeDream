@@ -43,7 +43,10 @@ DriverServer::DriverServer(){
 }
 
 bool DriverServer::IsLightPresent()const {
-	return (std::chrono::steady_clock::now() - m_LastUpdate.load()) < NoPingFor;
+	auto since_last_update = std::chrono::steady_clock::now() - m_LastUpdate.load();
+	LogDriverServer(Display, "IsLightPresent: SinceLastUpdate: %s", (since_last_update.count()/(1000 * 1000))/1000.f);
+
+	return since_last_update < NoPingFor;
 }
 
 bool DriverServer::IsDriverPresent()const {
