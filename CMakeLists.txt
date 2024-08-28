@@ -17,7 +17,8 @@ add_subdirectory(libs/json)
 add_executable(LifeCouldBeDreamBot
 	"./bot/sources/main.cpp"
 	"./bot/sources/simple_bot.cpp"
-)
+	"./bot/sources/bot.cpp"
+ "bot/sources/driver.cpp" "bot/sources/dream.cpp")
 
 target_link_libraries(LifeCouldBeDreamBot 
 	PUBLIC TgBot
