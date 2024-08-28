@@ -28,6 +28,8 @@ target_link_libraries(LifeCouldBeDreamBot
 	PUBLIC inih
 )
 
+target_compile_definitions(LifeCouldBeDreamBot PUBLIC BSL_WITH_TIME_LOG=1)
+
 if(CMAKE_WITH_CONAN)
 	find_package(OpenSSL)
 	target_link_libraries(LifeCouldBeDreamBot PUBLIC openssl::openssl)

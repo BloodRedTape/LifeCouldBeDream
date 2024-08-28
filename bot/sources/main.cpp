@@ -10,6 +10,8 @@ std::string HttpEndpoint(const std::string& hostname, int port) {
 	return Format("http://%:%", hostname, port);
 }
 
+DEFINE_LOG_CATEGORY(Timer)
+
 int main() {
 	INIReader config("BotConfig.ini");
 
@@ -40,10 +42,13 @@ int main() {
 	std::thread([server_endpoint](){
 		httplib::Client client(server_endpoint);
 
+		auto period = std::chrono::milliseconds(1000);
+
 		for (;;) {
+			LogTimer(Display, "Tick, period: %", period);
 			client.Post("/timer/tick");
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			std::this_thread::sleep_for(period);
 		}
 	}).detach();
 	
