@@ -45,7 +45,7 @@ int main() {
 		for (;;) {
 			LogTimer(Display, "Tick, period: %", period.count());
 
-			HttpPost(driver_endpoint, "/timer/tick");
+			HttpPost(driver_endpoint, "/driver/tick");
 
 			std::this_thread::sleep_for(period);
 		}
