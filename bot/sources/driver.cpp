@@ -6,6 +6,7 @@ DEFINE_LOG_CATEGORY(DriverServer)
 DriverServer::DriverServer(){
 	Post("/driver/light/update", [&](const httplib::Request& req, httplib::Response& resp) {
 		m_LastUpdate = std::chrono::steady_clock::now();
+		LogDriverServer(Display, "/driver/light/update");
 
 		resp.status = 200;
 	});
@@ -30,7 +31,7 @@ DriverServer::DriverServer(){
 		auto old_status = m_LastLightStatus;
 		m_LastLightStatus = LightStatus();
 
-		LogDriverServer(Display, "LightStatus: %", m_LastLightStatus.has_value() ? Format("(%)", m_LastLightStatus.value()) : "()");
+		LogDriverServer(Display, "/driver/tick: %", m_LastLightStatus.has_value() ? Format("(%)", m_LastLightStatus.value()) : "()");
 	
 		if(old_status.has_value() && m_LastLightStatus.has_value() 
 		&& old_status.value() != m_LastLightStatus.value()){ 
