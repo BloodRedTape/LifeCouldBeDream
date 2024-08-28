@@ -40,13 +40,12 @@ int main() {
 	}).detach();
 
 	std::thread([driver_endpoint](){
-		httplib::Client client(driver_endpoint);
-
 		auto period = std::chrono::milliseconds(1000);
 
 		for (;;) {
 			LogTimer(Display, "Tick, period: %", period.count());
-			client.Post("/timer/tick");
+
+			HttpPost(driver_endpoint, "/timer/tick");
 
 			std::this_thread::sleep_for(period);
 		}
