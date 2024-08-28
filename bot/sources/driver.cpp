@@ -57,7 +57,7 @@ std::optional<bool> DriverServer::LightStatus()const {
 	return {IsLightPresent()};
 }
 
-std::vector<LightNotify> DriverServer::CollectNotifies()const {
+std::vector<LightNotify> DriverServer::CollectNotifies() {
 	std::vector<LightNotify> notifies;
 
 	{

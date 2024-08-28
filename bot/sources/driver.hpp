@@ -25,7 +25,7 @@ public:
 
 	std::optional<bool> LightStatus()const;
 
-	std::vector<LightNotify> CollectNotifies()const;
+	std::vector<LightNotify> CollectNotifies();
 
 	static DriverServer& Get();
 };
