@@ -43,7 +43,7 @@ std::optional<bool> DriverServer::LightStatus()const {
 }
 
 DriverServer& DriverServer::Get() {
-	static DriverServer *s_Server = new DriverServer();
+	static DriverServer s_Server;
 
-	return *s_Server;
+	return s_Server;
 }
