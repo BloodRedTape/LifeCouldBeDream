@@ -6,10 +6,10 @@
 
 auto CurrentTime() {
     auto now = std::chrono::system_clock::now();
-    auto now_time_t = std::chrono::system_clock::to_time_t(now);
-    auto now_tm = *std::localtime(&now_time_t);
+    std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
+    std::tm localTime = *std::localtime(&nowTime);
     
-    return std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S");
+    return Format("%:%:%", localTime.tm_hour + 1, localTime.tm_min, localTime.tm_sec);
 }
 
 DEFINE_LOG_CATEGORY(Driver)
