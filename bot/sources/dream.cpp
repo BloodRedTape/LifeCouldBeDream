@@ -31,8 +31,10 @@ DreamServer::DreamServer() {
 		LogDreamServer(Display, "LightStatus: %", m_LastLightStatus.has_value() ? Format("(%)", m_LastLightStatus.value()) : "()");
 	
 		if(old_status.has_value() && m_LastLightStatus.has_value() 
-		&& old_status.value() != m_LastLightStatus.value())
+		&& old_status.value() != m_LastLightStatus.value()){ 
+			LogDreamServer(Info, "Notify generated");
 			m_LightNotifies.push_back({m_LastLightStatus.value() ? LightChange::Up : LightChange::Down, 0});
+		}
 
 		resp.status = 200;
 	});
