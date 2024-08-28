@@ -25,6 +25,21 @@ DriverServer::DriverServer(){
 		m_DriverPresent = false;
 		resp.status = 200;
 	});
+
+	Post("/driver/tick", [&](const httplib::Request& req, httplib::Response& resp) {
+		auto old_status = m_LastLightStatus;
+		m_LastLightStatus = LightStatus();
+
+		LogDriverServer(Display, "LightStatus: %", m_LastLightStatus.has_value() ? Format("(%)", m_LastLightStatus.value()) : "()");
+	
+		if(old_status.has_value() && m_LastLightStatus.has_value() 
+		&& old_status.value() != m_LastLightStatus.value()){ 
+			LogDriverServer(Info, "Notify generated");
+			m_LightNotifies.push_back({m_LastLightStatus.value() ? LightChange::Up : LightChange::Down, 0});
+		}
+
+		resp.status = 200;
+	});
 }
 
 bool DriverServer::IsLightPresent()const {
@@ -40,6 +55,17 @@ std::optional<bool> DriverServer::LightStatus()const {
 		return std::nullopt;
 	
 	return {IsLightPresent()};
+}
+
+std::vector<LightNotify> DriverServer::CollectNotifies()const {
+	std::vector<LightNotify> notifies;
+
+	{
+		std::scoped_lock lock(m_NotifyMutex);
+		notifies = std::move(m_LightNotifies);
+	}
+
+	return notifies;
 }
 
 DriverServer& DriverServer::Get() {

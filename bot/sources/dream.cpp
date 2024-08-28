@@ -20,23 +20,7 @@ DreamServer::DreamServer() {
 
 	Get ("/light/notifications", [&](const httplib::Request& req, httplib::Response& resp) {
 		resp.status = 200;
-		resp.set_content(nlohmann::json(m_LightNotifies).dump(), "application/json");
-		m_LightNotifies.clear();
-	});
-
-	Post("/timer/tick", [&](const httplib::Request& req, httplib::Response& resp) {
-		auto old_status = m_LastLightStatus;
-		m_LastLightStatus = DriverServer::Get().LightStatus();
-
-		LogDreamServer(Display, "LightStatus: %", m_LastLightStatus.has_value() ? Format("(%)", m_LastLightStatus.value()) : "()");
-	
-		if(old_status.has_value() && m_LastLightStatus.has_value() 
-		&& old_status.value() != m_LastLightStatus.value()){ 
-			LogDreamServer(Info, "Notify generated");
-			m_LightNotifies.push_back({m_LastLightStatus.value() ? LightChange::Up : LightChange::Down, 0});
-		}
-
-		resp.status = 200;
+		resp.set_content(nlohmann::json(DriverServer::Get().CollectNotifies()).dump(), "application/json");
 	});
 }
 

@@ -39,8 +39,8 @@ int main() {
 		DriverServer::Get().listen(driver_hostname, driver_port);
 	}).detach();
 
-	std::thread([server_endpoint](){
-		httplib::Client client(server_endpoint);
+	std::thread([driver_endpoint](){
+		httplib::Client client(driver_endpoint);
 
 		auto period = std::chrono::milliseconds(1000);
 
