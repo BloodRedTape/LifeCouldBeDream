@@ -5,10 +5,13 @@
 #include <optional>
 
 class DriverServer: public httplib::Server{
-	volatile std::atomic<std::chrono::steady_clock::time_point> m_LastUpdate = std::chrono::steady_clock::now();
-	volatile std::atomic<bool> m_DriverPresent;
-public:
+	const std::chrono::seconds NoPingFor = std::chrono::seconds(5);
+private:
+	std::atomic<std::chrono::steady_clock::time_point> m_LastUpdate = std::chrono::steady_clock::now();
+	std::atomic<bool> m_DriverPresent = false;
+private:
 	DriverServer();
+public:
 
 	bool IsLightPresent()const;
 

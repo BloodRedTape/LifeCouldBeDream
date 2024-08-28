@@ -6,7 +6,6 @@
 #include "dream.hpp"
 #include "bot.hpp"
 
-
 std::string HttpEndpoint(const std::string& hostname, int port) {
 	return Format("http://%:%", hostname, port);
 }
@@ -35,7 +34,7 @@ int main() {
 	}).detach();
 
 	std::thread([driver_port, driver_hostname](){
-		DriverServer().listen(driver_hostname, driver_port);
+		DriverServer::Get().listen(driver_hostname, driver_port);
 	}).detach();
 
 	std::thread([server_endpoint](){

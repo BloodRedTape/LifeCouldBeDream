@@ -4,8 +4,6 @@
 DEFINE_LOG_CATEGORY(DriverServer)
 
 DriverServer::DriverServer(){
-	m_DriverPresent.store(false);
-
 	Post("/driver/light/update", [&](const httplib::Request& req, httplib::Response& resp) {
 		m_LastUpdate = std::chrono::steady_clock::now();
 
@@ -20,21 +18,21 @@ DriverServer::DriverServer(){
 
 	Post("/driver/connect", [&](const httplib::Request& req, httplib::Response& resp) {
 		m_LastUpdate = std::chrono::steady_clock::now();
-		m_DriverPresent.store(true);
+		m_DriverPresent = true;
 		resp.status = 200;
 	});
 	Post("/driver/disconnect", [&](const httplib::Request& req, httplib::Response& resp) {
-		m_DriverPresent.store(false);
+		m_DriverPresent = false;
 		resp.status = 200;
 	});
 }
 
 bool DriverServer::IsLightPresent()const {
-	return (std::chrono::steady_clock::now() - m_LastUpdate.load()) < std::chrono::seconds(8);
+	return (std::chrono::steady_clock::now() - m_LastUpdate.load()) < NoPingFor;
 }
 
 bool DriverServer::IsDriverPresent()const {
-	return m_DriverPresent.load();
+	return m_DriverPresent;
 }
 
 std::optional<bool> DriverServer::LightStatus()const {
@@ -45,7 +43,7 @@ std::optional<bool> DriverServer::LightStatus()const {
 }
 
 DriverServer& DriverServer::Get() {
-	static DriverServer s_Server;
+	static DriverServer *s_Server = new DriverServer();
 
-	return s_Server;
+	return *s_Server;
 }
