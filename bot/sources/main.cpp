@@ -7,6 +7,7 @@
 #include "simple_bot.hpp"
 #include <tgbot/net/TgLongPoll.h>
 #include "http.hpp"
+#include "notify.hpp"
 
 const char *Section = "Bot";
 
@@ -16,29 +17,21 @@ static const char *NoSvet = (const char*)u8"🔴Свет закончился...
 static const char *SvetNotify = (const char*)u8"🟢Свет!🟢";
 static const char *NoSvetNotify = (const char*)u8"🔴No Свет?🔴";
 
-enum class LightChange {
-	None,
-	Up,
-	Down
-};
-
-struct LightNotify {
-	LightChange Change;	
-	std::int64_t UnixTime = 0;
-
-	NLOHMANN_DEFINE_TYPE_INTRUSIVE(LightNotify, Change, UnixTime)
-};
+DEFINE_LOG_CATEGORY(DreamBot)
 
 class DreamBot: public SimpleBot{
+	static constexpr const char *ChatsFile = "chats.json";
+private:
 	std::optional<bool> m_LastLightStatus;
 	std::vector<std::int64_t> m_Chats;
-	const char *ChatsFile = "chats.json";
 
-	const char *DriverEndpoint = "http://driver.dream.bloodredtape.com";
-	const char *ServerEndpoint = "http://dream.bloodredtape.com";
+	std::string m_DriverEndpoint;
+	std::string m_ServerEndpoint;
 public:
-	DreamBot(const std::string &token):
-		SimpleBot(token)
+	DreamBot(const std::string &token, const std::string &server_endpoint, const std::string &driver_endpoint):
+		SimpleBot(token),
+		m_ServerEndpoint(server_endpoint),
+		m_DriverEndpoint(driver_endpoint)
 	{
 		OnCommand("light_status", this, &DreamBot::OnStatus);
 		OnCommand("light_enable", this, &DreamBot::OnEnable);
@@ -57,10 +50,14 @@ public:
 	}
 
 	void Tick() {
-		std::vector<LightNotify> notifications = HttpGetJson(ServerEndpoint, "/light/notifications");
+		try{
+			std::vector<LightNotify> notifications = HttpGetJson(m_ServerEndpoint, "/light/notifications");
 
-		for(const auto &notify: notifications)
-			Broadcast(notify);
+			for(const auto &notify: notifications)
+				Broadcast(notify);
+		} catch (const std::exception& e) {
+			Println("%", e.what());
+		}
 	}
 
 	void Broadcast(const LightNotify &notify) {
@@ -88,7 +85,7 @@ public:
 		if(message->from->username != "BloodRedTape")
 			return;
 
-		auto status = HttpPostStatus(DriverEndpoint, "/driver/disconnect");
+		auto status = HttpPostStatus(m_DriverEndpoint, "/driver/disconnect");
 
 		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 	}
@@ -97,7 +94,7 @@ public:
 		if(message->from->username != "BloodRedTape")
 			return;
 
-		auto status = HttpPostStatus(DriverEndpoint, "/driver/connect");
+		auto status = HttpPostStatus(m_DriverEndpoint, "/driver/connect");
 
 		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 	}
@@ -106,11 +103,13 @@ public:
 		if(message->from->username != "BloodRedTape")
 			return;
 
-		auto status = HttpGetStatus(DriverEndpoint, "/driver/status");
+		auto status = HttpGetStatus(m_DriverEndpoint, "/driver/status");
 
 		ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 	}
 };
+
+DEFINE_LOG_CATEGORY(DriverServer)
 
 class DriverServer: public httplib::Server{
 	volatile std::atomic<std::chrono::steady_clock::time_point> m_LastUpdate = std::chrono::steady_clock::now();
@@ -164,14 +163,17 @@ public:
 	}
 };
 
+DEFINE_LOG_CATEGORY(DreamServer)
+
 class DreamServer: public httplib::Server{
 	std::vector<LightNotify> m_LightNotifies;
 	std::optional<bool> m_LastLightStatus;
 public:
 
 	DreamServer() {
-
 		Get ("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
+			LogDreamServer(Display, "Driver: %, Light: %", DriverServer::Get().IsDriverPresent(), DriverServer::Get().IsLightPresent());
+
 			if (!DriverServer::Get().IsDriverPresent()) {
 				resp.status = httplib::StatusCode::NotFound_404;
 				return;
@@ -191,10 +193,12 @@ public:
 		Post("/timer/tick", [&](const httplib::Request& req, httplib::Response& resp) {
 			auto old_status = m_LastLightStatus;
 			m_LastLightStatus = DriverServer::Get().LightStatus();
+
+			LogDreamServer(Display, "LightStatus: %", m_LastLightStatus.has_value() ? Format("(%)", m_LastLightStatus.value()) : "()");
 		
 			if(old_status.has_value() && m_LastLightStatus.has_value() 
 			&& old_status.value() != m_LastLightStatus.value())
-				m_LightNotifies.push_back({m_LastLightStatus.value() ? LightChange::Up : LightChange::Down});
+				m_LightNotifies.push_back({m_LastLightStatus.value() ? LightChange::Up : LightChange::Down, 0});
 
 			resp.status = 200;
 		});
@@ -210,6 +214,10 @@ void DreamBot::OnStatus(TgBot::Message::Ptr message) {
 	ReplyMessage(message, DriverServer::Get().IsLightPresent() ? Svet : NoSvet);
 }
 
+std::string HttpEndpoint(const std::string& hostname, int port) {
+	return Format("http://%:%", hostname, port);
+}
+
 int main() {
 	INIReader config("BotConfig.ini");
 
@@ -218,40 +226,27 @@ int main() {
 		return EXIT_FAILURE;
 	}
 
-	std::string hostname = config.Get("Server", "Host", "localhost");
-	int port = config.GetInteger("Server", "Port", 1488);
+	std::string server_hostname = config.Get("Server", "Host", "localhost");
+	int server_port = config.GetInteger("Server", "Port", 1488);
 
 	std::string driver_hostname = config.Get("Driver", "Host", "localhost");
 	int driver_port = config.GetInteger("Driver", "Port", 44188);
 
 	std::string token = config.Get("Bot", "Token", "");
 
-	std::string endpoint = Format("http://%:%", hostname, port);
+	std::string server_endpoint = HttpEndpoint(server_hostname, server_port);
+	std::string driver_endpoint = HttpEndpoint(driver_hostname, driver_port);
 
-	std::thread(
-		[](std::string host, int port){
-			DreamServer server;
-			bool status = server.listen(host, port);
+	std::thread([server_hostname, server_port](){
+		DreamServer().listen(server_hostname, server_port);
+	}).detach();
 
-			Println("Status: %", status);
-		},
-		hostname,
-		port
-	).detach();
+	std::thread([driver_port, driver_hostname](){
+		DriverServer().listen(driver_hostname, driver_port);
+	}).detach();
 
-	std::thread(
-		[](std::string host, int port){
-			DriverServer server;
-			bool status = server.listen(host, port);
-
-			Println("Status: %", status);
-		},
-		driver_hostname,
-		driver_port
-	).detach();
-
-	std::thread([](){
-		httplib::Client client("http://dream.bloodredtape.com");
+	std::thread([server_endpoint](){
+		httplib::Client client(server_endpoint);
 
 		for (;;) {
 			client.Post("/timer/tick");
@@ -260,10 +255,10 @@ int main() {
 		}
 	}).detach();
 	
-	DreamBot bot(token);
-
+	DreamBot bot(token, server_endpoint, driver_endpoint);
 
 	TgBot::TgLongPoll poll(bot, 100, 1);
+
 	while (true) {
 		try{
 			poll.start();
