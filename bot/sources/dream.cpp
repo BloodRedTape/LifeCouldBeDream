@@ -14,6 +14,7 @@ DreamServer::DreamServer() {
 		resp.status = DriverServer::Get().IsLightPresent() 
 			? httplib::StatusCode::OK_200 
 			: httplib::StatusCode::Gone_410;
+		resp.set_content(std::to_string(resp.status), "plain/text");
 	});
 
 	Super::Get ("/light/notifications", [&](const httplib::Request& req, httplib::Response& resp) {
@@ -24,17 +25,20 @@ DreamServer::DreamServer() {
 	Super::Post("/driver/connect", [&](const httplib::Request& req, httplib::Response& resp) {
 		SetDriverPresent(true);
 		resp.status = 200;
+		resp.set_content(std::to_string(resp.status), "plain/text");
 	});
 
 	Super::Post("/driver/disconnect", [&](const httplib::Request& req, httplib::Response& resp) {
 		SetDriverPresent(false);
 		resp.status = 200;
+		resp.set_content(std::to_string(resp.status), "plain/text");
 	});
 
 	Super::Get ("/driver/status", [&](const httplib::Request& req, httplib::Response& resp) {
 		resp.status = IsDriverPresent() 
 			? httplib::StatusCode::OK_200 
 			: httplib::StatusCode::Gone_410;
+		resp.set_content(std::to_string(resp.status), "plain/text");
 	});
 }
 
