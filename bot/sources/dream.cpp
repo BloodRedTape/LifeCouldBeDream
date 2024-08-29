@@ -4,6 +4,10 @@
 
 DEFINE_LOG_CATEGORY(DreamServer)
 
+std::string CodeToJson(int code) {
+	return nlohmann::json({{"Status", std::to_string(code)}}).dump();
+}
+
 DreamServer::DreamServer() {
 	Super::Get ("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
 		if (!IsDriverPresent()) {
@@ -14,7 +18,7 @@ DreamServer::DreamServer() {
 		resp.status = DriverServer::Get().IsLightPresent() 
 			? httplib::StatusCode::OK_200 
 			: httplib::StatusCode::Gone_410;
-		resp.set_content(std::to_string(resp.status), "plain/text");
+		resp.set_content(CodeToJson(resp.status), "application/json");
 	});
 
 	Super::Get ("/light/notifications", [&](const httplib::Request& req, httplib::Response& resp) {
@@ -25,20 +29,20 @@ DreamServer::DreamServer() {
 	Super::Post("/driver/connect", [&](const httplib::Request& req, httplib::Response& resp) {
 		SetDriverPresent(true);
 		resp.status = 200;
-		resp.set_content(std::to_string(resp.status), "plain/text");
+		resp.set_content(CodeToJson(resp.status), "application/json");
 	});
 
 	Super::Post("/driver/disconnect", [&](const httplib::Request& req, httplib::Response& resp) {
 		SetDriverPresent(false);
 		resp.status = 200;
-		resp.set_content(std::to_string(resp.status), "plain/text");
+		resp.set_content(CodeToJson(resp.status), "application/json");
 	});
 
 	Super::Get ("/driver/status", [&](const httplib::Request& req, httplib::Response& resp) {
 		resp.status = IsDriverPresent() 
 			? httplib::StatusCode::OK_200 
 			: httplib::StatusCode::Gone_410;
-		resp.set_content(std::to_string(resp.status), "plain/text");
+		resp.set_content(CodeToJson(resp.status), "application/json");
 	});
 }
 
