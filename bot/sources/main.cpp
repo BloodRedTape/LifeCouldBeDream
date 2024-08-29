@@ -53,7 +53,7 @@ int main() {
 	
 	DreamBot bot(token, server_endpoint);
 
-	TgBot::TgLongPoll poll(bot, 100, 1);
+	FastLongPoll poll(bot, 100, 1);
 
 	while (true) {
 		try{

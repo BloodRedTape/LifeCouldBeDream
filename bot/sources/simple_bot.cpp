@@ -350,3 +350,39 @@ void SimplePollBot::LongPollIteration() {
 		Log("LongPoolException: %", e.what());
     }
 }
+
+
+FastLongPoll::FastLongPoll(const TgBot::Api* api, const TgBot::EventHandler* eventHandler, std::int32_t limit, std::int32_t timeout, std::shared_ptr<std::vector<std::string>> allowUpdates)
+    : _api(api), _eventHandler(eventHandler), _limit(limit), _timeout(timeout)
+    , _allowUpdates(std::move(allowUpdates)) {
+
+    const_cast<TgBot::HttpClient&>(_api->_httpClient)._timeout = _timeout + 5;
+
+    for (TgBot::Update::Ptr& item : _api->getUpdates(-1, 1)) {
+        if (item->updateId >= _lastUpdateId) {
+            _lastUpdateId = item->updateId + 1;
+        }
+    }
+}
+
+FastLongPoll::FastLongPoll(const TgBot::Bot& bot, std::int32_t limit, std::int32_t timeout, const std::shared_ptr<std::vector<std::string>>& allowUpdates)
+    : FastLongPoll(&bot.getApi(), &bot.getEventHandler(), limit, timeout, allowUpdates) {
+}
+
+void FastLongPoll::start() {
+    _updates = _api->getUpdates(_lastUpdateId, _limit, _timeout, _allowUpdates);
+
+    handleUpdates();
+}
+
+void FastLongPoll::handleUpdates()
+{
+    for (TgBot::Update::Ptr& item : _updates) {
+        if (item->updateId >= _lastUpdateId) {
+            _lastUpdateId = item->updateId + 1;
+        }
+        _eventHandler->handleUpdate(item);
+    }
+}
+
+

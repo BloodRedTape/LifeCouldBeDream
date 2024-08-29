@@ -174,3 +174,27 @@ public:
     
     void LongPollIteration();
 };
+
+
+class FastLongPoll {
+public:
+    FastLongPoll(const TgBot::Api* api, const TgBot::EventHandler* eventHandler, std::int32_t limit, std::int32_t timeout, std::shared_ptr<std::vector<std::string>> allowUpdates);
+    FastLongPoll(const TgBot::Bot& bot, std::int32_t limit = 100, std::int32_t timeout = 10, const std::shared_ptr<std::vector<std::string>>& allowUpdates = nullptr);
+
+    void start();
+
+private:
+
+    void handleUpdates();
+
+private:
+    const TgBot::Api* _api;
+    const TgBot::EventHandler* _eventHandler;
+    std::int32_t _lastUpdateId = 0;
+    std::int32_t _limit;
+    std::int32_t _timeout;
+    std::shared_ptr<std::vector<std::string>> _allowUpdates;
+
+    std::vector<TgBot::Update::Ptr> _updates;
+};
+
