@@ -1,6 +1,7 @@
 #include "dream.hpp"
 #include "driver.hpp"
 #include <bsl/log.hpp>
+#include <bsl/file.hpp>
 
 DEFINE_LOG_CATEGORY(DreamServer)
 
@@ -9,6 +10,15 @@ std::string StringJson(const std::string &str) {
 }
 
 DreamServer::DreamServer() {
+	
+	try{
+		DreamState state = nlohmann::json::parse(ReadEntireFile(DreamStateFile), nullptr, false, false);
+		m_IsDriverPresent = state.IsDriverPresent;
+	}catch (const std::exception& e) {
+		LogDreamServer(Error, "%", e.what());
+	}
+
+
 	Super::Get ("/light", [&](const httplib::Request& req, httplib::Response& resp) {
 		auto status = LightStatus();
 
@@ -52,6 +62,11 @@ DreamServer::DreamServer() {
 
 void DreamServer::SetDriverPresent(bool is){
 	m_IsDriverPresent = is;
+
+	DreamState state;
+	state.IsDriverPresent = m_IsDriverPresent;
+	
+	WriteEntireFile(DreamStateFile, nlohmann::json(state).dump());
 }
 
 bool DreamServer::IsDriverPresent() const{

@@ -6,8 +6,16 @@
 #include <mutex>
 #include "notify.hpp"
 
+struct DreamState{
+	bool IsDriverPresent = false;
+
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE(DreamState, IsDriverPresent)
+};
+
 class DreamServer: public httplib::Server{
 	using Super = httplib::Server;
+
+	const char *DreamStateFile = "dream_state.json";
 private:
 	std::atomic<bool> m_IsDriverPresent = false;
 	std::optional<bool> m_LastLightStatus;
