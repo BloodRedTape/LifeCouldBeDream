@@ -2,6 +2,7 @@
 #include <bsl/log.hpp>
 #include <chrono>
 #include <boost/asio/ip/udp.hpp>
+#include <thread>
 
 DEFINE_LOG_CATEGORY(Driver)
 
