@@ -3,6 +3,7 @@
 #include "http.hpp"
 #include <optional>
 #include <atomic>
+#include <mutex>
 #include "notify.hpp"
 
 class DreamServer: public httplib::Server{
@@ -10,10 +11,14 @@ class DreamServer: public httplib::Server{
 private:
 	std::atomic<bool> m_IsDriverPresent = false;
 	std::optional<bool> m_LastLightStatus;
+
+	std::mutex m_LightNotifiesLock;
 	std::vector<LightNotify> m_LightNotifies;
 private:
 	DreamServer();
 public:
+
+	void SetDriverPresent(bool is);
 
 	bool IsDriverPresent()const;
 

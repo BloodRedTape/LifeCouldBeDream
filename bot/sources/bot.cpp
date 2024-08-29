@@ -54,7 +54,7 @@ void DreamBot::Broadcast(const LightNotify &notify) {
 }
 
 void DreamBot::OnStatus(TgBot::Message::Ptr message) {
-	auto status = HttpGetStatus(m_ServerEndpoint, "/light/status");
+	auto status = DreamServer::Get().LightStatus();
 
 	if(!status.has_value())
 		return (void)ReplyMessage(message, "Internal error..., maybe a part of infrastructure is corrupted.");
@@ -92,26 +92,24 @@ void DreamBot::OnDisable(TgBot::Message::Ptr message) {
 void DreamBot::OnDriverDisconnect(TgBot::Message::Ptr message) {
 	if(message->from->username != "BloodRedTape")
 		return;
+	
+	DreamServer::Get().SetDriverPresent(false);
 
-	auto status = HttpPostStatus(m_ServerEndpoint, "/driver/disconnect");
-
-	ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
+	ReplyMessage(message, "Driver disconnected");
 }
 
 void DreamBot::OnDriverConnect(TgBot::Message::Ptr message) {
 	if(message->from->username != "BloodRedTape")
 		return;
 
-	auto status = HttpPostStatus(m_ServerEndpoint, "/driver/connect");
+	DreamServer::Get().SetDriverPresent(true);
 
-	ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
+	ReplyMessage(message, "Driver connected");
 }
 
 void DreamBot::OnDriverStatus(TgBot::Message::Ptr message) {
 	if(message->from->username != "BloodRedTape")
 		return;
 
-	auto status = HttpGetStatus(m_ServerEndpoint, "/driver/status");
-
-	ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
+	ReplyMessage(message, DreamServer::Get().IsDriverPresent() ? "Driver connected" : "Driver disconnected");
 }

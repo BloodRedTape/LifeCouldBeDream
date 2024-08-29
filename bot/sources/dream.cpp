@@ -23,13 +23,13 @@ DreamServer::DreamServer() {
 		resp.set_content(nlohmann::json(CollectNotifies()).dump(), "application/json");
 	});
 
-	Post("/driver/connect", [&](const httplib::Request& req, httplib::Response& resp) {
-		m_IsDriverPresent = true;	
+	Super::Post("/driver/connect", [&](const httplib::Request& req, httplib::Response& resp) {
+		SetDriverPresent(true);
 		resp.status = 200;
 	});
 
-	Post("/driver/disconnect", [&](const httplib::Request& req, httplib::Response& resp) {
-		m_IsDriverPresent = false;	
+	Super::Post("/driver/disconnect", [&](const httplib::Request& req, httplib::Response& resp) {
+		SetDriverPresent(false);
 		resp.status = 200;
 	});
 
@@ -39,21 +39,25 @@ DreamServer::DreamServer() {
 			: httplib::StatusCode::Gone_410;
 	});
 
-
-	Post("/timer/tick", [&](const httplib::Request& req, httplib::Response& resp) {
+	Super::Post("/timer/tick", [&](const httplib::Request& req, httplib::Response& resp) {
 		auto old_status = m_LastLightStatus;
 		m_LastLightStatus = LightStatus();
 
 		LogDreamServer(Display, "/timer/tick: %", m_LastLightStatus.has_value() ? Format("(%)", m_LastLightStatus.value()) : "()");
 
-		if (old_status.has_value() && m_LastLightStatus.has_value()
-			&& old_status.value() != m_LastLightStatus.value()) {
+		if (old_status.has_value() && m_LastLightStatus.has_value() && old_status.value() != m_LastLightStatus.value()) {
 			LogDreamServer(Info, "Notify generated");
+
+			std::scoped_lock lock(m_LightNotifiesLock);
 			m_LightNotifies.push_back({ m_LastLightStatus.value() ? LightChange::Up : LightChange::Down, 0 });
 		}
 
 		resp.status = 200;
 	});
+}
+
+void DreamServer::SetDriverPresent(bool is){
+	m_IsDriverPresent = is;
 }
 
 bool DreamServer::IsDriverPresent() const{
@@ -68,7 +72,13 @@ std::optional<bool> DreamServer::LightStatus()const {
 }
 
 std::vector<LightNotify> DreamServer::CollectNotifies(){
-	std::vector<LightNotify> result = std::move(m_LightNotifies);
+	std::vector<LightNotify> result;
+
+	{
+		std::scoped_lock lock(m_LightNotifiesLock);
+
+		result = std::move(m_LightNotifies);
+	}
 
 	return result;
 }
