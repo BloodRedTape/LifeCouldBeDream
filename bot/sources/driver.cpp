@@ -5,7 +5,6 @@ DEFINE_LOG_CATEGORY(DriverServer)
 
 bool DriverServer::IsLightPresent()const {
 	auto since_last_update = std::chrono::steady_clock::now() - m_LastUpdate.load();
-	LogDriverServer(Display, "IsLightPresent: SinceLastUpdate: %s", (since_last_update.count()/(1000 * 1000))/1000.f);
 
 	return since_last_update < NoPingFor;
 }
@@ -22,8 +21,6 @@ void DriverServer::Run(int port){
             std::size_t length = socket.receive_from(boost::asio::buffer(buffer), remote_endpoint);
 
             m_LastUpdate = std::chrono::steady_clock::now();
-            
-            LogDriverServer(Display, "Got update");
         }
     } catch (std::exception& e) {
         LogDriverServer(Error, "Run failed with: %", e.what());

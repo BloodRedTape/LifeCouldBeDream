@@ -6,8 +6,6 @@ DEFINE_LOG_CATEGORY(DreamServer)
 
 DreamServer::DreamServer() {
 	Super::Get ("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
-		LogDreamServer(Display, "Driver: %, Light: %", IsDriverPresent(), DriverServer::Get().IsLightPresent());
-
 		if (!IsDriverPresent()) {
 			resp.status = httplib::StatusCode::NotFound_404;
 			return;
@@ -38,22 +36,6 @@ DreamServer::DreamServer() {
 			? httplib::StatusCode::OK_200 
 			: httplib::StatusCode::Gone_410;
 	});
-
-	Super::Post("/timer/tick", [&](const httplib::Request& req, httplib::Response& resp) {
-		auto old_status = m_LastLightStatus;
-		m_LastLightStatus = LightStatus();
-
-		LogDreamServer(Display, "/timer/tick: %", m_LastLightStatus.has_value() ? Format("(%)", m_LastLightStatus.value()) : "()");
-
-		if (old_status.has_value() && m_LastLightStatus.has_value() && old_status.value() != m_LastLightStatus.value()) {
-			LogDreamServer(Info, "Notify generated");
-
-			std::scoped_lock lock(m_LightNotifiesLock);
-			m_LightNotifies.push_back({ m_LastLightStatus.value() ? LightChange::Up : LightChange::Down, 0 });
-		}
-
-		resp.status = 200;
-	});
 }
 
 void DreamServer::SetDriverPresent(bool is){
@@ -81,6 +63,18 @@ std::vector<LightNotify> DreamServer::CollectNotifies(){
 	}
 
 	return result;
+}
+
+void DreamServer::Tick(){
+	auto old_status = m_LastLightStatus;
+	m_LastLightStatus = LightStatus();
+
+	if (old_status.has_value() && m_LastLightStatus.has_value() && old_status.value() != m_LastLightStatus.value()) {
+		LogDreamServer(Info, "Notify generated");
+
+		std::scoped_lock lock(m_LightNotifiesLock);
+		m_LightNotifies.push_back({ m_LastLightStatus.value() ? LightChange::Up : LightChange::Down, 0 });
+	}
 }
 
 DreamServer& DreamServer::Get(){

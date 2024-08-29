@@ -43,9 +43,7 @@ int main() {
 		auto period = std::chrono::milliseconds(900);
 
 		for (;;) {
-			LogTimer(Display, "Tick, period: %", period.count());
-
-			HttpPost(server_endpoint, "/timer/tick");
+			DreamServer::Get().Tick();
 
 			std::this_thread::sleep_for(period);
 		}
