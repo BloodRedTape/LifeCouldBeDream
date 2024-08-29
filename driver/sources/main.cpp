@@ -30,27 +30,33 @@ int main() {
     int port = 44188;
     auto period = std::chrono::milliseconds(1000);
 
-
-    auto endpoint = GetEndpoint(hostname, port);
-
-    if(!endpoint.has_value())
-        return (LogDriver(Error, "Can't resolve %:%", hostname, port), EXIT_FAILURE);
-
-    LogDriver(Display, "Resolved % to %", hostname, endpoint.value().address().to_string());
-
     udp::socket socket(s_Context);
     socket.open(udp::v4());
 
     for (;;) {
-        std::string message;
+        try {
 
-        boost::system::error_code ec;
-        socket.send_to(boost::asio::buffer(message), endpoint.value(), 0, ec);
+            auto endpoint = GetEndpoint(hostname, port);
 
-        if (ec) {
-            LogDriver(Error, "Failed to send packet: %", ec.message());
-        } else {
-            LogDriver(Display, "Packet sent successfully");
+            if(!endpoint.has_value()){
+                (LogDriver(Error, "Can't resolve %:%", hostname, port), EXIT_FAILURE);
+                continue;
+            }
+
+            LogDriver(Display, "Resolved % to %", hostname, endpoint.value().address().to_string());
+            std::string message;
+
+            boost::system::error_code ec;
+            socket.send_to(boost::asio::buffer(message), endpoint.value(), 0, ec);
+
+            if (ec) {
+                LogDriver(Error, "Failed to send packet: %", ec.message());
+            } else {
+                LogDriver(Display, "Packet sent successfully");
+            }
+
+        } catch (const std::exception& e) {
+            LogDriver(Error, "Tick exception: %", e.what());
         }
 
         std::this_thread::sleep_for(period);
