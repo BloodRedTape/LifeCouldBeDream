@@ -26,5 +26,7 @@ public:
 	
 	std::vector<LightNotify> CollectNotifies();
 
+	void Tick();
+
 	static DreamServer &Get();
 };
