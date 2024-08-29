@@ -8,7 +8,7 @@
 #include <boost/asio/ip/udp.hpp>
 
 class DriverServer{
-	const std::chrono::seconds NoPingFor = std::chrono::seconds(5);
+	const std::chrono::seconds NoPingFor = std::chrono::seconds(3);
 private:
 	std::atomic<std::chrono::steady_clock::time_point> m_LastUpdate = std::chrono::steady_clock::now();
 private:

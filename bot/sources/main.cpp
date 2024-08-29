@@ -40,7 +40,7 @@ int main() {
 	}).detach();
 
 	std::thread([server_endpoint](){
-		auto period = std::chrono::milliseconds(1111);
+		auto period = std::chrono::milliseconds(4000);
 
 		for (;;) {
 			LogTimer(Display, "Tick, period: %", period.count());
