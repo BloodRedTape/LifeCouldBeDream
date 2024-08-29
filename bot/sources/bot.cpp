@@ -37,12 +37,12 @@ DreamBot::DreamBot(const std::string &token, const std::string &server_endpoint)
 
 void DreamBot::Tick() {
 	try{
-		std::vector<LightNotify> notifications = HttpGetJson(m_ServerEndpoint, "/light/notifications");
+		std::vector<LightNotify> notifications = DreamServer::Get().CollectNotifies();
 
 		for(const auto &notify: notifications)
 			Broadcast(notify);
 	} catch (const std::exception& e) {
-		Println("%", e.what());
+		LogDreamBot(Error, "%", e.what());
 	}
 }
 
