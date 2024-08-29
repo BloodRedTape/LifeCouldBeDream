@@ -8,3 +8,6 @@ CMakeToolchain
 
 [layout]
 cmake_layout
+
+[options]
+openssl/*:shared=False
