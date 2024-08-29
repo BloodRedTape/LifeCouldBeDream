@@ -57,9 +57,6 @@ void DreamBot::OnStatus(TgBot::Message::Ptr message) {
 	auto status = DreamServer::Get().LightStatus();
 
 	if(!status.has_value())
-		return (void)ReplyMessage(message, "Internal error..., maybe a part of infrastructure is corrupted.");
-
-	if(status.value() == httplib::StatusCode::NotFound_404)
 		return (void)ReplyMessage(message, "Light status unknown, raspberry service is down");
 
 	ReplyMessage(message, status.value() ? Svet : NoSvet);
