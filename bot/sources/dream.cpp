@@ -4,21 +4,24 @@
 
 DEFINE_LOG_CATEGORY(DreamServer)
 
-std::string CodeToJson(int code) {
-	return nlohmann::json({{"Status", std::to_string(code)}}).dump();
+std::string StringJson(const std::string &str) {
+	return nlohmann::json(str).dump();
 }
 
 DreamServer::DreamServer() {
-	Super::Get ("/light/status", [&](const httplib::Request& req, httplib::Response& resp) {
-		if (!IsDriverPresent()) {
-			resp.status = httplib::StatusCode::NotFound_404;
-			return;
-		}
+	Super::Get ("/light", [&](const httplib::Request& req, httplib::Response& resp) {
+		auto status = LightStatus();
 
-		resp.status = DriverServer::Get().IsLightPresent() 
-			? httplib::StatusCode::OK_200 
-			: httplib::StatusCode::Gone_410;
-		resp.set_content(CodeToJson(resp.status), "application/json");
+		auto status_string = status.has_value() 
+			? (status.value() 
+				? "On"
+				: "Off")
+			: "Unknown";
+
+		auto json = nlohmann::json({{"Status", status_string}});
+
+		resp.status = httplib::StatusCode::OK_200;
+		resp.set_content(json.dump(), "application/json");
 	});
 
 	Super::Get ("/light/notifications", [&](const httplib::Request& req, httplib::Response& resp) {
@@ -29,20 +32,21 @@ DreamServer::DreamServer() {
 	Super::Post("/driver/connect", [&](const httplib::Request& req, httplib::Response& resp) {
 		SetDriverPresent(true);
 		resp.status = 200;
-		resp.set_content(CodeToJson(resp.status), "application/json");
+		resp.set_content(StringJson("Done"), "application/json");
 	});
 
 	Super::Post("/driver/disconnect", [&](const httplib::Request& req, httplib::Response& resp) {
 		SetDriverPresent(false);
 		resp.status = 200;
-		resp.set_content(CodeToJson(resp.status), "application/json");
+		resp.set_content(StringJson("Done"), "application/json");
 	});
 
-	Super::Get ("/driver/status", [&](const httplib::Request& req, httplib::Response& resp) {
-		resp.status = IsDriverPresent() 
-			? httplib::StatusCode::OK_200 
-			: httplib::StatusCode::Gone_410;
-		resp.set_content(CodeToJson(resp.status), "application/json");
+	Super::Get ("/driver", [&](const httplib::Request& req, httplib::Response& resp) {
+		resp.status = httplib::StatusCode::OK_200;
+
+		auto json = nlohmann::json({{"Status", IsDriverPresent() ? "Connected" : "Disconnected"}});
+
+		resp.set_content(json.dump(), "application/json");
 	});
 }
 
