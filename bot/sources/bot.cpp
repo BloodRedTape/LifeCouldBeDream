@@ -62,7 +62,7 @@ void DreamBot::OnStatus(TgBot::Message::Ptr message) {
 	if(status.value() == httplib::StatusCode::NotFound_404)
 		return (void)ReplyMessage(message, "Light status unknown, raspberry service is down");
 
-	ReplyMessage(message, status.value() == httplib::StatusCode::OK_200 ? Svet : NoSvet);
+	ReplyMessage(message, status.value() ? Svet : NoSvet);
 }
 
 void DreamBot::OnEnable(TgBot::Message::Ptr message) {
