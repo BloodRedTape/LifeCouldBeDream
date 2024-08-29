@@ -3,6 +3,7 @@
 #include <bsl/file.hpp>
 #include "http.hpp"
 #include "driver.hpp"
+#include "dream.hpp"
 
 #undef SendMessage
 
@@ -14,10 +15,9 @@ static const char *NoSvet = (const char*)u8"🔴Свет закончился...
 static const char *SvetNotify = (const char*)u8"🟢Свет!🟢";
 static const char *NoSvetNotify = (const char*)u8"🔴No Свет?🔴";
 
-DreamBot::DreamBot(const std::string &token, const std::string &server_endpoint, const std::string &driver_endpoint):
+DreamBot::DreamBot(const std::string &token, const std::string &server_endpoint):
 	SimpleBot(token),
-	m_ServerEndpoint(server_endpoint),
-	m_DriverEndpoint(driver_endpoint)
+	m_ServerEndpoint(server_endpoint)
 {
 	OnCommand("light_status", this, &DreamBot::OnStatus);
 	OnCommand("light_enable", this, &DreamBot::OnEnable);
@@ -54,29 +54,46 @@ void DreamBot::Broadcast(const LightNotify &notify) {
 }
 
 void DreamBot::OnStatus(TgBot::Message::Ptr message) {
-	if(!DriverServer::Get().IsDriverPresent())
-		return (void)ReplyMessage(message, "Unknown, raspberry is down");
+	auto status = HttpGetStatus(m_ServerEndpoint, "/light/status");
 
-	ReplyMessage(message, DriverServer::Get().IsLightPresent() ? Svet : NoSvet);
+	if(!status.has_value())
+		return (void)ReplyMessage(message, "Internal error..., maybe a part of infrastructure is corrupted.");
+
+	if(status.value() == httplib::StatusCode::NotFound_404)
+		return (void)ReplyMessage(message, "Light status unknown, raspberry service is down");
+
+	ReplyMessage(message, status.value() == httplib::StatusCode::OK_200 ? Svet : NoSvet);
 }
 
 void DreamBot::OnEnable(TgBot::Message::Ptr message) {
 	if(std::count(m_Chats.begin(), m_Chats.end(), message->chat->id))
-		return;
+		return (void)ReplyMessage(message, (const char*)u8"Дурак? делу не поможет");
 
 	m_Chats.push_back(message->chat->id);
 	WriteEntireFile(ChatsFile, nlohmann::json(m_Chats).dump());
+
+	return (void)ReplyMessage(message, (const char*)u8"Subscribed to light events!");
 }
 
 void DreamBot::OnDisable(TgBot::Message::Ptr message) {
-	ReplyMessage(message, "Hehe, undisableable");
+	auto it = std::find(m_Chats.begin(), m_Chats.end(), message->chat->id);
+
+	if(it == m_Chats.end())
+		return (void)ReplyMessage(message, (const char*)u8"Ты за кого играешь?");
+	
+	std::swap(*it, m_Chats.back());
+	m_Chats.pop_back();
+
+	WriteEntireFile(ChatsFile, nlohmann::json(m_Chats).dump());
+
+	return (void)ReplyMessage(message, (const char*)u8"Unsubscribed from light events!");
 }
 
 void DreamBot::OnDriverDisconnect(TgBot::Message::Ptr message) {
 	if(message->from->username != "BloodRedTape")
 		return;
 
-	auto status = HttpPostStatus(m_DriverEndpoint, "/driver/disconnect");
+	auto status = HttpPostStatus(m_ServerEndpoint, "/driver/disconnect");
 
 	ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 }
@@ -85,7 +102,7 @@ void DreamBot::OnDriverConnect(TgBot::Message::Ptr message) {
 	if(message->from->username != "BloodRedTape")
 		return;
 
-	auto status = HttpPostStatus(m_DriverEndpoint, "/driver/connect");
+	auto status = HttpPostStatus(m_ServerEndpoint, "/driver/connect");
 
 	ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 }
@@ -94,7 +111,7 @@ void DreamBot::OnDriverStatus(TgBot::Message::Ptr message) {
 	if(message->from->username != "BloodRedTape")
 		return;
 
-	auto status = HttpGetStatus(m_DriverEndpoint, "/driver/status");
+	auto status = HttpGetStatus(m_ServerEndpoint, "/driver/status");
 
 	ReplyMessage(message, status.has_value() ? Format("Status: %", (int)status.value()) : "Failed");
 }

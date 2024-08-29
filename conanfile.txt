@@ -1,5 +1,6 @@
 [requires]
 openssl/3.2.1
+boost/1.82.0
 
 [generators]
 CMakeDeps

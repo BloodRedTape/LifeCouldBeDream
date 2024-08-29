@@ -5,27 +5,18 @@
 #include <atomic>
 #include <mutex>
 #include <optional>
+#include <boost/asio/ip/udp.hpp>
 
-class DriverServer: public httplib::Server{
+class DriverServer{
 	const std::chrono::seconds NoPingFor = std::chrono::seconds(5);
 private:
 	std::atomic<std::chrono::steady_clock::time_point> m_LastUpdate = std::chrono::steady_clock::now();
-	std::atomic<bool> m_DriverPresent = false;
-
-	std::optional<bool> m_LastLightStatus;
-	std::mutex m_NotifyMutex;
-	std::vector<LightNotify> m_LightNotifies;
 private:
-	DriverServer();
+	DriverServer() = default;
 public:
-
 	bool IsLightPresent()const;
 
-	bool IsDriverPresent()const;
-
-	std::optional<bool> LightStatus()const;
-
-	std::vector<LightNotify> CollectNotifies();
+	void Run(int port);
 
 	static DriverServer& Get();
 };

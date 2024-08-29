@@ -32,26 +32,26 @@ int main() {
 	std::string driver_endpoint = HttpEndpoint(driver_hostname, driver_port);
 
 	std::thread([server_hostname, server_port](){
-		DreamServer().listen(server_hostname, server_port);
+		DreamServer::Get().listen(server_hostname, server_port);
 	}).detach();
 
-	std::thread([driver_port, driver_hostname](){
-		DriverServer::Get().listen(driver_hostname, driver_port);
+	std::thread([driver_port](){
+		DriverServer::Get().Run(driver_port);
 	}).detach();
 
-	std::thread([driver_endpoint](){
-		auto period = std::chrono::milliseconds(1000);
+	std::thread([server_endpoint](){
+		auto period = std::chrono::milliseconds(1111);
 
 		for (;;) {
 			LogTimer(Display, "Tick, period: %", period.count());
 
-			HttpPost(driver_endpoint, "/driver/tick");
+			HttpPost(server_endpoint, "/timer/tick");
 
 			std::this_thread::sleep_for(period);
 		}
 	}).detach();
 	
-	DreamBot bot(token, server_endpoint, driver_endpoint);
+	DreamBot bot(token, server_endpoint);
 
 	TgBot::TgLongPoll poll(bot, 100, 1);
 

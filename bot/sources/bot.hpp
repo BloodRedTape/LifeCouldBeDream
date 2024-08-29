@@ -10,10 +10,9 @@ private:
 	std::optional<bool> m_LastLightStatus;
 	std::vector<std::int64_t> m_Chats;
 
-	std::string m_DriverEndpoint;
 	std::string m_ServerEndpoint;
 public:
-	DreamBot(const std::string &token, const std::string &server_endpoint, const std::string &driver_endpoint);
+	DreamBot(const std::string &token, const std::string &server_endpoint);
 
 	void Tick();
 
