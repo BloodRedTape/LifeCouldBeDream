@@ -1,6 +1,6 @@
 
 
-if(!CMAKE_WITH_CONAN)
+if(NOT CMAKE_WITH_CONAN)
 	add_subdirectory(../libs/bsl bsl)
 endif()
 
