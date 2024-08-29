@@ -3,6 +3,7 @@
 #include <chrono>
 #include <boost/asio/ip/udp.hpp>
 #include <thread>
+#include <optional>
 
 DEFINE_LOG_CATEGORY(Driver)
 
