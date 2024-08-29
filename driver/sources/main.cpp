@@ -33,10 +33,12 @@ int main() {
     udp::socket socket(s_Context);
     socket.open(udp::v4());
 
+    std::optional<boost::asio::ip::udp::endpoint> endpoint;
+
     for (;;) {
         try {
-
-            auto endpoint = GetEndpoint(hostname, port);
+            if(!endpoint.has_value())
+                endpoint = GetEndpoint(hostname, port);
 
             if(!endpoint.has_value()){
                 (LogDriver(Error, "Can't resolve %:%", hostname, port), EXIT_FAILURE);
