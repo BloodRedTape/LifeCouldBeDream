@@ -2,6 +2,7 @@
 #include <bsl/log.hpp>
 #include <chrono>
 #include <boost/asio/ip/udp.hpp>
+#include <boost/algorithm/string.hpp>
 #include <thread>
 #include <optional>
 
@@ -10,7 +11,7 @@ DEFINE_LOG_CATEGORY(Driver)
 
 boost::asio::io_context s_Context;
 
-std::optional<boost::asio::ip::udp::endpoint> GetEndpoint(const std::string &hostname, int port) {
+std::optional<boost::asio::ip::udp::endpoint> ResolveHostname(const std::string &hostname, int port) {
     using namespace boost::asio::ip;
 
     udp::resolver resolver(s_Context);
@@ -21,6 +22,22 @@ std::optional<boost::asio::ip::udp::endpoint> GetEndpoint(const std::string &hos
         return std::nullopt;
         
     return {*result.begin()};
+}
+
+bool LooksLikeDefaultGateway(const boost::asio::ip::udp::endpoint& endpoint) {
+    auto str = endpoint.address().to_string();
+
+    return boost::starts_with(str, "192.168");
+}
+
+bool IsValidResolution(std::optional<boost::asio::ip::udp::endpoint> endpoint) {
+    if(!endpoint.has_value())
+        return false;
+    
+    if(LooksLikeDefaultGateway(endpoint.value()))
+        return false;
+
+    return true;
 }
 
 int main() {
@@ -37,8 +54,8 @@ int main() {
 
     for (;;) {
         try {
-            if(!endpoint.has_value())
-                endpoint = GetEndpoint(hostname, port);
+            if(!IsValidResolution(endpoint))
+                endpoint = ResolveHostname(hostname, port);
 
             if(!endpoint.has_value()){
                 (LogDriver(Error, "Can't resolve %:%", hostname, port), EXIT_FAILURE);
