@@ -12,8 +12,8 @@ DEFINE_LOG_CATEGORY(DreamBot)
 static const char *Svet = (const char*)u8"🟢Свет есть!🟢";
 static const char *NoSvet = (const char*)u8"🔴Свет закончился...🔴";
 
-static const char *SvetNotify = (const char*)u8"🟢Свет!🟢";
-static const char *NoSvetNotify = (const char*)u8"🔴No Свет?🔴";
+static const char *SvetNotify = (const char*)u8"🟢Кажись дали свет, не переживай конечно, скоро заберут))";
+static const char *NoSvetNotify = (const char*)u8"🔴Ахахаха лох сиди без света";
 
 DreamBot::DreamBot(const std::string &token, const std::string &server_endpoint):
 	SimpleBot(token),
